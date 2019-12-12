@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import Kingfisher
 import Reachability
 
 class MainController: UIViewController {
@@ -20,7 +21,10 @@ class MainController: UIViewController {
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-                
+            
+        //clean any cached images from last search
+        ImageCache.default.clearMemoryCache()
+    
         //setup a reachability notifier to detect connectivity changes
          NotificationCenter.default.addObserver(self, selector: #selector(reachabilityChanged(note:)), name: .reachabilityChanged, object: reachability)
           try? reachability.startNotifier()
