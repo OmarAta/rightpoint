@@ -11,7 +11,7 @@ import Alamofire
 import SwiftyJSON
 
 protocol SearchOMDBDelegate {
-    func fetchDataNewResults(_ results: [Show])
+    func fetchDataNewResults(_ results: [Show], page: Int, totalResults: Int)
 }
 
 class SearchOMDB: NSObject {
@@ -26,6 +26,7 @@ class SearchOMDB: NSObject {
     func fetchData(title: String, type: String, page: Int = 1) {
         DispatchQueue(label: "SearchOMDB.fetchData", qos: .background).async {
             var results = [Show]()
+            var totalResults = 0
             
             //send the GET request
             Alamofire.request(getURL(for: title, type: type, page: page)).responseJSON { rawResponse in
@@ -34,31 +35,19 @@ class SearchOMDB: NSObject {
                     
                     //check if "Response" is true
                     if (response["Response"].boolValue) {
-                        
+                        //get the total number of results
+                        totalResults = response["totalResults"].intValue
+
                         //get the "Search" JSON object
                         let shows = response["Search"].arrayValue
                         for show in shows {
                             results.append(Show(title: show["Title"].stringValue, year: show["Year"].stringValue, poster: show["Poster"].stringValue))
                         }
-                        
-                        //inform the delegate about the new results
-                        self.delegate.fetchDataNewResults(results)
-                        
-                        //clean the results array since we are calling fetchData() recursivly
-                        results.removeAll()
-                        
-                        //check if there are more pages of results to read
-                        if ((page * 10) < response["totalResults"].intValue ) {
-                            self.fetchData(title: title, type: type, page: page + 1)
-                        }
-                    } else {
-                        //return empty array on error
-                        self.delegate.fetchDataNewResults(results)
                     }
-                } else {
-                    //return empty array on error
-                    self.delegate.fetchDataNewResults(results)
                 }
+                
+                //inform the delegate about the new results
+                self.delegate.fetchDataNewResults(results, page: page, totalResults: totalResults)
             }
         }
     }

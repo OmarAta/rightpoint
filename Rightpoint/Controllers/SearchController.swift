@@ -12,9 +12,15 @@ import Kingfisher
 
 class SearchController: UIViewController, UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout, SearchOMDBDelegate {
 
+    lazy var searchOMDB: SearchOMDB = {
+        return SearchOMDB(self)
+    }()
+    
     var shows = [Show]()
     var searchTitle = ""
     var searchType  = ""
+    var lastLoadedPage = 0
+    var totalResults   = 0
     
     //UI Elements
     @IBOutlet weak var collectionView: UICollectionView!
@@ -31,14 +37,21 @@ class SearchController: UIViewController, UICollectionViewDelegate, UICollection
             showLoadingView()
             
             //initiate the data fetching from OMDB
-            SearchOMDB(self).fetchData(title: searchTitle, type: searchType)
+            searchOMDB.fetchData(title: searchTitle, type: searchType)
         }
     }
     
     //MARK:- Fetch Data Functions
-    func fetchDataNewResults(_ results: [Show]) {
+    func fetchDataNewResults(_ results: [Show], page: Int, totalResults: Int) {
         //we got something, hide loadingView
         hideLoadingView()
+        
+        //update the title with the result count
+        title = "\(searchTitle) (\(totalResults))"
+        
+        //update the local variables for tracking
+        self.totalResults = totalResults
+        lastLoadedPage = max(lastLoadedPage, page)
         
         if (results.count == 0 && shows.count == 0) {
             //show "No Results" view
@@ -54,13 +67,27 @@ class SearchController: UIViewController, UICollectionViewDelegate, UICollection
     
     //MARK:- Collection View Functions
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        title = "\(searchTitle) (\(shows.count))"
         return shows.count
     }
     
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
         //adjust the cell width to half the screen
         return CGSize(width: view.frame.width/2, height: 280)
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        if (shows.count < totalResults) {
+            if (indexPath.row == (shows.count - 8)) {
+                //load more results when we the user is about to reach the bottom
+                //load one more page
+                searchOMDB.fetchData(title: searchTitle, type: searchType, page: lastLoadedPage + 1)
+
+                /**
+                   NOTE: 8 here is just an arbitrary number
+                   the higher the number, the better experiance the user will have, but it comes as a cost of more API calls (sooner than needed).
+                **/
+            }
+        }
     }
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
