@@ -1,2 +1,2 @@
 # rightpoint
-RightPoint Demo App
+Rightpoint Demo App
